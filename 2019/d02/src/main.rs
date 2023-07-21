@@ -25,15 +25,43 @@ fn read_input() -> std::io::Result<String> {
     Ok(input)
 }
 
-fn main() {
-    let input = read_input().unwrap();
-    let integers: Vec<&str> = input.split(',').collect();
+fn part_one(input: String) {
+    let mut integers: Vec<i32> = input
+        .trim()
+        .split(',')
+        .map(|e| e.parse().unwrap())
+        .collect();
+    integers[1] = 12;
+    integers[2] = 2;
     let mut position = 0;
-    while let Some(op_code) = OpCode::from_i32(integers[position].parse::<i32>().unwrap()) {
+    while position < integers.len() {
+        let op_code = OpCode::from_i32(integers[position]).unwrap();
         if op_code == OpCode::Halt {
             break;
         }
-        println!("{:?}", op_code);
+
+        // Get the value of integers at index n, and convert that value to an index (usize)
+        let in1_i: usize = integers[position + 1] as usize;
+        let in2_i: usize = integers[position + 2] as usize;
+        let out_i: usize = integers[position + 3] as usize;
+        let in1: i32 = integers[in1_i];
+        let in2: i32 = integers[in2_i];
+
+        let result: i32 = match op_code {
+            OpCode::Add => in1 + in2,
+            OpCode::Multiply => in1 * in2,
+            _ => break,
+        };
+
+        integers[out_i] = result;
         position += 4
     }
+    println!("{}", integers[0]);
+}
+
+// fn part_two() {}
+
+fn main() {
+    let input = read_input().unwrap();
+    part_one(input);
 }
