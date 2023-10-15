@@ -1,5 +1,4 @@
-use core::panic;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::{io, path::Path};
@@ -10,9 +9,9 @@ fn read_input(filename: &str) -> io::Result<String> {
     Ok(input)
 }
 
-fn calc_manhattan_dist(p1: (i32, i32), p2: &(i32, i32)) -> i32 {
-    let (x1, y1) = p1;
-    let (x2, y2) = p2;
+fn calc_manhattan_dist(p1: (i32, i32, i32), p2: (&(i32, i32), &i32)) -> i32 {
+    let (x1, y1, _) = p1;
+    let ((x2, y2), _) = p2;
     let x = i32::abs(x1 - x2);
     let y = i32::abs(y1 - y2);
     x + y
@@ -24,48 +23,57 @@ fn get_instructions_from_text(text: &str) -> Vec<String> {
 }
 
 fn parse_instruction(
-    current_pos: (i32, i32),
+    current_pos: (i32, i32, i32),
     instruction: &String,
-) -> Result<(i32, i32), Box<dyn Error>> {
+) -> Result<(i32, i32, i32), Box<dyn Error>> {
     let (direction, value_digits) = instruction.split_at(1);
     let value: i32 = value_digits.parse()?;
     let delta = match direction {
-        "U" => (0, value),
-        "D" => (0, -value),
-        "L" => (-value, 0),
-        "R" => (value, 0),
+        "U" => (0, value, value),
+        "D" => (0, -value, value),
+        "L" => (-value, 0, value),
+        "R" => (value, 0, value),
         _ => return Err(From::from("Direction given not recognised")),
     };
-    Ok((current_pos.0 + delta.0, current_pos.1 + delta.1))
+    Ok((
+        current_pos.0 + delta.0,
+        current_pos.1 + delta.1,
+        current_pos.2 + delta.2,
+    ))
 }
 
-fn get_intersections(v1: Vec<(i32, i32)>, v2: Vec<(i32, i32)>) -> HashSet<(i32, i32)> {
-    let set1: HashSet<_> = v1.into_iter().collect();
-    let set2: HashSet<_> = v2.into_iter().collect();
+fn get_intersections(
+    v1: Vec<(i32, i32, i32)>,
+    v2: Vec<(i32, i32, i32)>,
+) -> HashMap<(i32, i32), i32> {
+    let map1: HashMap<_, _> = v1.into_iter().map(|(x, y, s)| ((x, y), s)).collect();
+    let map2: HashMap<_, _> = v2.into_iter().map(|(x, y, s)| ((x, y), s)).collect();
 
-    set1.intersection(&set2).cloned().collect()
+    map1.into_iter()
+        .filter_map(|(k, v)| map2.get(&k).map(|v2| (k, v + v2)))
+        .collect()
 }
 
-fn get_points_between(p1: (i32, i32), p2: (i32, i32)) -> Vec<(i32, i32)> {
-    let (x1, y1) = p1;
-    let (x2, y2) = p2;
+fn get_points_between(p1: (i32, i32, i32), p2: (i32, i32, i32)) -> Vec<(i32, i32, i32)> {
+    let (x1, y1, s1) = p1;
+    let (x2, y2, _) = p2;
     if x1 == x2 {
         if y1 < y2 {
-            (y1..=y2).map(|y| (x1, y)).collect()
+            (y1..=y2).map(|y| (x1, y, (y - y1).abs() + s1)).collect()
         } else {
-            (y2..=y1).map(|y| (x1, y)).collect()
+            (y2..=y1).map(|y| (x1, y, (y1 - y).abs() + s1)).collect()
         }
     } else {
         if x1 < x2 {
-            (x1..=x2).map(|x| (x, y1)).collect()
+            (x1..=x2).map(|x| (x, y1, (x - x1).abs() + s1)).collect()
         } else {
-            (x2..=x1).map(|x| (x, y1)).collect()
+            (x2..=x1).map(|x| (x, y1, (x1 - x).abs() + s1)).collect()
         }
     }
 }
 
-fn interpolate_vector(vector: &Vec<(i32, i32)>) -> Vec<(i32, i32)> {
-    let mut interpolated_vec: Vec<(i32, i32)> = Vec::new();
+fn interpolate_vector(vector: &Vec<(i32, i32, i32)>) -> Vec<(i32, i32, i32)> {
+    let mut interpolated_vec: Vec<(i32, i32, i32)> = Vec::new();
     for (i, _) in vector.iter().enumerate() {
         if i >= vector.len() - 1 {
             interpolated_vec.push(vector[i]);
@@ -84,7 +92,7 @@ fn main() {
         .iter()
         .map(|e| get_instructions_from_text(e))
         .map(|e| {
-            let mut pos = (0, 0);
+            let mut pos = (0, 0, 0);
             e.iter()
                 .map(|x| {
                     pos = parse_instruction(pos, x).unwrap();
@@ -97,8 +105,10 @@ fn main() {
     let intersections = get_intersections(paths[0].clone(), paths[1].clone());
     let distances: Vec<_> = intersections
         .iter()
-        .map(|i| calc_manhattan_dist((0, 0), i))
+        .map(|i| calc_manhattan_dist((0, 0, 0), i))
         .collect();
     let min_dist = distances.iter().min().unwrap();
-    println!("{:?}", min_dist);
+    let min_steps = intersections.iter().min_by_key(|i| i.1).unwrap().1;
+    println!("Part 01, {min_dist:?}");
+    println!("Part 02: {min_steps:?}")
 }
