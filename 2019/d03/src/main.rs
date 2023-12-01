@@ -1,4 +1,3 @@
-use core::panic;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
@@ -78,7 +77,7 @@ fn interpolate_vector(vector: &Vec<(i32, i32)>) -> Vec<(i32, i32)> {
 }
 
 fn main() {
-    let input = read_input("input").unwrap();
+    let input = read_input("sample").unwrap();
     let lines = input.trim().split('\n').collect::<Vec<_>>();
     let paths: Vec<_> = lines
         .iter()
@@ -100,5 +99,6 @@ fn main() {
         .map(|i| calc_manhattan_dist((0, 0), i))
         .collect();
     let min_dist = distances.iter().min().unwrap();
-    println!("{:?}", min_dist);
+    println!("Part 01: {min_dist}");
+    println!("Part 02: ??");
 }
