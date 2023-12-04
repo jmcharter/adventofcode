@@ -15,12 +15,34 @@ fn main() -> io::Result<()> {
 }
 
 fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
-    13
+    let mut sum = 0;
+    for line in reader.lines().flatten() {
+        let card_data: Vec<_> = line.split(": ").collect();
+        let all_numbers = card_data[1];
+        let number_parts: Vec<Vec<String>> = all_numbers
+            .split('|')
+            .map(|x| {
+                x.replace("  ", " ")
+                    .split_whitespace()
+                    .map(|val| val.to_string())
+                    .collect()
+            })
+            .collect();
+        let (winning_nums, owned_nums) = (&number_parts[0], &number_parts[1]);
+        let matches = owned_nums
+            .iter()
+            .filter(|num| winning_nums.contains(num))
+            .count();
+        if matches > 0 {
+            sum += 2_u32.pow((matches - 1) as u32);
+        }
+    }
+    sum
 }
 
-fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
-    1
-}
+// fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
+//     1
+// }
 
 #[cfg(test)]
 mod tests {
