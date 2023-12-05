@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     env, fs,
     io::{self, BufRead, BufReader, Read},
 };
@@ -6,11 +7,13 @@ use std::{
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
-    let file = fs::File::open(filename)?;
-    let reader = BufReader::new(file);
+    let file1 = fs::File::open(filename)?;
+    let file2 = fs::File::open(filename)?;
+    let reader1 = BufReader::new(file1);
+    let reader2 = BufReader::new(file2);
 
-    println!("Part one: {}", process_part_one(reader));
-    // println!("Part two: {}", process_part_two(reader2));
+    println!("Part one: {}", process_part_one(reader1));
+    println!("Part two: {}", process_part_two(reader2));
     Ok(())
 }
 
@@ -40,9 +43,56 @@ fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
     sum
 }
 
-// fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
-//     1
-// }
+#[derive(Debug)]
+struct CardInfo {
+    count: u32,
+}
+
+fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
+    let mut cards: BTreeMap<u32, CardInfo> = BTreeMap::new();
+    for line in reader.lines().flatten() {
+        let card_data: Vec<_> = line.split(": ").collect();
+        let card_id: u32 = card_data[0]
+            .replace("Card", "")
+            .trim()
+            .parse()
+            .expect("is digit");
+        let all_numbers = card_data[1];
+        let number_parts: Vec<Vec<String>> = all_numbers
+            .split('|')
+            .map(|x| {
+                x.replace("  ", " ")
+                    .split_whitespace()
+                    .map(|val| val.to_string())
+                    .collect()
+            })
+            .collect();
+        let (winning_nums, owned_nums) = (&number_parts[0], &number_parts[1]);
+        let matches = owned_nums
+            .iter()
+            .filter(|num| winning_nums.contains(num))
+            .count();
+        let card_details = CardInfo { count: 1 };
+        if let Some(old_card_info) = cards.insert(card_id, card_details) {
+            let card_entry = cards.get_mut(&card_id);
+            card_entry.expect("card exists").count += old_card_info.count;
+        };
+        let current_card = cards.get(&card_id).expect("card exists");
+        if matches > 0 {
+            for _ in 0..current_card.count {
+                for i in (card_id + 1)..=(matches as u32) + card_id {
+                    let new_card_info = CardInfo { count: 1 };
+                    if let Some(old_card_info) = cards.insert(i, new_card_info) {
+                        let card_entry = cards.get_mut(&i).expect("card exists");
+                        card_entry.count += old_card_info.count;
+                    }
+                }
+            }
+        }
+    }
+    let sum = cards.iter().fold(0, |acc, c| acc + c.1.count);
+    sum
+}
 
 #[cfg(test)]
 mod tests {
@@ -61,9 +111,9 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11";
         assert_eq!(13, process_part_one(BufReader::new(input_bytes)));
     }
 
-    // #[test]
-    // fn test_process_part_two() {
-    //     let input_bytes = INPUT.as_bytes();
-    //     assert_eq!(467835, process_part_two(BufReader::new(input_bytes)));
-    // }
+    #[test]
+    fn test_process_part_two() {
+        let input_bytes = INPUT.as_bytes();
+        assert_eq!(30, process_part_two(BufReader::new(input_bytes)));
+    }
 }
