@@ -7,12 +7,12 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
     let file1 = fs::File::open(filename)?;
-    // let file2 = fs::File::open(filename)?;
+    let file2 = fs::File::open(filename)?;
     let mut reader1 = BufReader::new(file1);
-    // let reader2 = BufReader::new(file2);
+    let mut reader2 = BufReader::new(file2);
 
     println!("Part one: {}", process_part_one(&mut reader1));
-    // println!("Part two: {}", process_part_two(reader2));
+    println!("Part two: {}", process_part_two(&mut reader2));
     Ok(())
 }
 
@@ -54,7 +54,7 @@ impl MapLine {
     }
 }
 
-fn process_part_one<R: Read>(reader: &mut BufReader<R>) -> u32 {
+fn parse_input<R: Read>(reader: &mut BufReader<R>) -> (Vec<String>, Vec<Map>) {
     let mut almanac = String::new();
     reader
         .read_to_string(&mut almanac)
@@ -66,6 +66,7 @@ fn process_part_one<R: Read>(reader: &mut BufReader<R>) -> u32 {
         .last()
         .expect("at least one")
         .split_whitespace()
+        .map(|s| s.to_string())
         .collect();
     let maps: Vec<_> = others
         .iter()
@@ -89,6 +90,11 @@ fn process_part_one<R: Read>(reader: &mut BufReader<R>) -> u32 {
             }
         })
         .collect();
+    (seeds, maps)
+}
+
+fn process_part_one<R: Read>(reader: &mut BufReader<R>) -> u32 {
+    let (seeds, maps) = parse_input(reader);
     let mut res = u32::MAX;
     for seed in &seeds {
         let mut val = seed.parse::<u32>().expect("is digits");
@@ -100,10 +106,24 @@ fn process_part_one<R: Read>(reader: &mut BufReader<R>) -> u32 {
     res
 }
 
-// fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
-//     let sum = 0;
-//     sum
-// }
+fn process_part_two<R: Read>(reader: &mut BufReader<R>) -> u32 {
+    let (seeds, maps) = parse_input(reader);
+    let seed_chunks: Vec<_> = seeds.chunks(2).collect();
+    let mut res = u32::MAX;
+    for chunk in seed_chunks {
+        let range_start: u32 = chunk[0].parse().expect("is digits");
+        let range_length: u32 = chunk[1].parse().expect("is digits");
+        let range_end: u32 = range_start + range_length;
+        for seed in range_start..range_end {
+            let mut val = seed;
+            for map in &maps {
+                val = map.map_to_lines(val);
+            }
+            res = u32::min(res, val);
+        }
+    }
+    res
+}
 
 #[cfg(test)]
 mod tests {
@@ -149,9 +169,9 @@ humidity-to-location map:
         assert_eq!(35, process_part_one(&mut BufReader::new(input_bytes)));
     }
 
-    // #[test]
-    // fn test_process_part_two() {
-    //     let input_bytes = INPUT.as_bytes();
-    //     assert_eq!(30, process_part_two(BufReader::new(input_bytes)));
-    // }
+    #[test]
+    fn test_process_part_two() {
+        let input_bytes = INPUT.as_bytes();
+        assert_eq!(46, process_part_two(&mut BufReader::new(input_bytes)));
+    }
 }
