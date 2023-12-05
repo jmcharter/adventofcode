@@ -1,6 +1,6 @@
 use std::{
     env, fs,
-    io::{self, BufRead, BufReader, Read},
+    io::{self, BufReader, Read},
 };
 
 fn main() -> io::Result<()> {
@@ -8,17 +8,96 @@ fn main() -> io::Result<()> {
     let filename = &args[1];
     let file1 = fs::File::open(filename)?;
     // let file2 = fs::File::open(filename)?;
-    let reader1 = BufReader::new(file1);
+    let mut reader1 = BufReader::new(file1);
     // let reader2 = BufReader::new(file2);
 
-    println!("Part one: {}", process_part_one(reader1));
+    println!("Part one: {}", process_part_one(&mut reader1));
     // println!("Part two: {}", process_part_two(reader2));
     Ok(())
 }
 
-fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
-    let mut sum = 35;
-    sum
+#[derive(Debug)]
+struct Map {
+    lines: Vec<MapLine>,
+}
+
+impl Map {
+    fn map_to_lines(&self, key: u32) -> u32 {
+        for line in &self.lines {
+            if line.in_range(key) {
+                return line.map(key);
+            }
+        }
+        key
+    }
+}
+
+#[derive(Debug)]
+struct MapLine {
+    dest_range: u32,
+    source_range: u32,
+    range_length: u32,
+}
+
+impl MapLine {
+    fn map(&self, key: u32) -> u32 {
+        let diff = key - self.source_range;
+        if self.dest_range as i64 + diff as i64 > 0 {
+            return (self.dest_range as i64 + diff as i64) as u32;
+        }
+        key
+    }
+
+    fn in_range(&self, key: u32) -> bool {
+        self.source_range <= key
+            && (key as i64) < self.source_range as i64 + self.range_length as i64
+    }
+}
+
+fn process_part_one<R: Read>(reader: &mut BufReader<R>) -> u32 {
+    let mut almanac = String::new();
+    reader
+        .read_to_string(&mut almanac)
+        .expect("read successful");
+    let parts: Vec<&str> = almanac.split("\n\n").collect();
+    let (seeds, others) = parts.split_first().expect("at least one part");
+    let seeds: Vec<_> = seeds
+        .split(": ")
+        .last()
+        .expect("at least one")
+        .split_whitespace()
+        .collect();
+    let maps: Vec<_> = others
+        .iter()
+        .map(|item| {
+            let lines_iter = item
+                .split(':')
+                .last()
+                .expect("exists")
+                .trim()
+                .split('\n')
+                .map(|nums| {
+                    let nums_split = nums.split_whitespace().collect::<Vec<_>>();
+                    MapLine {
+                        dest_range: nums_split[0].parse().expect("is digit"),
+                        source_range: nums_split[1].parse().expect("is digit"),
+                        range_length: nums_split[2].parse().expect("is digit"),
+                    }
+                });
+            Map {
+                lines: lines_iter.collect(),
+            }
+        })
+        .collect();
+    let mut res = u32::MAX;
+    for seed in &seeds {
+        let mut val = seed.parse::<u32>().expect("is digits");
+        for map in &maps {
+            val = map.map_to_lines(val);
+        }
+        res = u32::min(res, val);
+    }
+    res
 }
 
 // fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
@@ -67,7 +146,7 @@ humidity-to-location map:
     #[test]
     fn test_process_part_one() {
         let input_bytes = INPUT.as_bytes();
-        assert_eq!(35, process_part_one(BufReader::new(input_bytes)));
+        assert_eq!(35, process_part_one(&mut BufReader::new(input_bytes)));
     }
 
     // #[test]
