@@ -33,7 +33,7 @@ mod tests {
     #[test]
     fn test_process_part_one() {
         let input_bytes = INPUT.as_bytes();
-        assert_eq!(35, process_part_one(&mut BufReader::new(input_bytes)));
+        assert_eq!(35, process_part_one(BufReader::new(input_bytes)));
     }
 
     // #[test]
