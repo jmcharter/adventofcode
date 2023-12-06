@@ -1,6 +1,7 @@
 use std::{
+    collections::HashSet,
     env, fs,
-    io::{self, BufReader, Read},
+    io::{self, BufRead, BufReader, Read},
 };
 
 fn main() -> io::Result<()> {
@@ -16,8 +17,35 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+fn calculate_ways_to_win(time: u32, dist: u32) -> HashSet<u32> {
+    let mut wins = HashSet::<u32>::new();
+    for t in 1..time {
+        let d = t * (time - t);
+        if d > dist {
+            wins.insert(t);
+        }
+    }
+    wins
+}
+
 fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
-    288
+    let lines = reader.lines().flatten();
+    let data: Vec<_> = lines
+        .map(|line| {
+            line.split(':')
+                .last()
+                .expect("text after colon")
+                .split_whitespace()
+                .map(|s| s.parse::<u32>().expect("numbers"))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    let results: Vec<_> = data[0].iter().zip(data[1].iter()).collect();
+    let mut win_method_qty: Vec<u32> = Vec::new();
+    for r in results {
+        win_method_qty.push(calculate_ways_to_win(*r.0, *r.1).len() as u32);
+    }
+    win_method_qty.iter().product()
 }
 
 // fn process_part_two<R: Read>(reader: &mut BufReader<R>) -> u32 {
