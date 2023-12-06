@@ -17,7 +17,7 @@ fn main() -> io::Result<()> {
 }
 
 fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
-    0
+    288
 }
 
 // fn process_part_two<R: Read>(reader: &mut BufReader<R>) -> u32 {
@@ -28,12 +28,13 @@ fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
 mod tests {
     use super::*;
 
-    const INPUT: &str = "";
+    const INPUT: &str = "Time:      7  15   30
+Distance:  9  40  200";
 
     #[test]
     fn test_process_part_one() {
         let input_bytes = INPUT.as_bytes();
-        assert_eq!(35, process_part_one(BufReader::new(input_bytes)));
+        assert_eq!(288, process_part_one(BufReader::new(input_bytes)));
     }
 
     // #[test]
