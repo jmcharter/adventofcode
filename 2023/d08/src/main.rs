@@ -33,12 +33,32 @@ fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
 mod tests {
     use super::*;
 
-    const INPUT: &str = "";
+    const INPUT1: &str = "RL
+
+AAA = (BBB, CCC)
+BBB = (DDD, EEE)
+CCC = (ZZZ, GGG)
+DDD = (DDD, DDD)
+EEE = (EEE, EEE)
+GGG = (GGG, GGG)
+ZZZ = (ZZZ, ZZZ)";
+
+    const INPUT2: &str = "LLR
+
+AAA = (BBB, BBB)
+BBB = (AAA, ZZZ)
+ZZZ = (ZZZ, ZZZ)
+";
 
     #[test]
-    fn test_process_part_one() {
-        let input_bytes = INPUT.as_bytes();
-        assert_eq!(0, process_part_one(BufReader::new(input_bytes)));
+    fn test_process_part_one_input1() {
+        let input_bytes = INPUT1.as_bytes();
+        assert_eq!(2, process_part_one(BufReader::new(input_bytes)));
+    }
+    #[test]
+    fn test_process_part_one_input2() {
+        let input_bytes = INPUT2.as_bytes();
+        assert_eq!(6, process_part_one(BufReader::new(input_bytes)));
     }
 
     // #[test]
