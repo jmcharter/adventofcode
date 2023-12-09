@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     env, fs,
     io::{self, BufRead, BufReader, Read},
 };
@@ -22,11 +21,11 @@ fn parse_data<R: Read>(reader: BufReader<R>) -> Vec<String> {
     lines.flatten().collect::<Vec<_>>()
 }
 
-fn process_part_one<R: Read>(reader: BufReader<R>) -> u64 {
+fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
     0
 }
 
-// fn process_part_two<R: Read>(reader: BufReader<R>) -> u64 {
+// fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
 //     0
 // }
 
