@@ -1,6 +1,9 @@
 use std::{
+    cell::RefCell,
+    collections::HashMap,
     env, fs,
     io::{self, BufRead, BufReader, Read},
+    rc::Rc,
 };
 
 fn main() -> io::Result<()> {
@@ -16,17 +19,90 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn parse_data<R: Read>(reader: BufReader<R>) -> Vec<String> {
-    let lines = reader.lines();
-    lines.flatten().collect::<Vec<_>>()
+#[derive(Debug)]
+struct Node {
+    value: String,
+    left: Option<Rc<RefCell<Node>>>,
+    right: Option<Rc<RefCell<Node>>>,
+}
+
+impl Node {
+    fn new(value: String) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Node {
+            value,
+            left: None,
+            right: None,
+        }))
+    }
+}
+
+fn parse_data<R: Read>(mut reader: BufReader<R>) -> (String, Rc<RefCell<Node>>) {
+    let directions = reader
+        .by_ref()
+        .lines()
+        .next()
+        .unwrap_or(Ok("".to_string()))
+        .expect("at least one line");
+    reader.by_ref().lines().next();
+    let mut data = Vec::new();
+    for line in reader.lines() {
+        let line = line.expect("line found");
+        data.push(line);
+    }
+    let mut nodes: HashMap<String, Rc<RefCell<Node>>> = HashMap::new();
+    for line in &data {
+        let parts: Vec<&str> = line.split('=').collect();
+        let value = parts[0].trim();
+        let node = Node::new(value.to_string());
+        nodes.insert(value.to_string(), node);
+    }
+    for line in &data {
+        let parts: Vec<&str> = line
+            .split(['=', '(', ')', ','])
+            .filter(|s| !s.trim().is_empty())
+            .collect();
+        let value = parts[0].trim();
+        let left = parts[1].trim();
+        let right = parts[2].trim();
+        if let Some(node_rc) = nodes.get(value) {
+            let mut node_borrowed = node_rc.borrow_mut();
+            if value != left {
+                node_borrowed.left = nodes.get(left).cloned();
+            }
+            if value != right {
+                node_borrowed.right = nodes.get(right).cloned();
+            }
+        }
+    }
+    let start_node = nodes.get("AAA").expect("Node 'AAA' exists").clone();
+    (directions, start_node)
 }
 
 fn process_part_one<R: Read>(reader: BufReader<R>) -> u32 {
-    0
+    let (directions, node) = parse_data(reader);
+    let mut steps = 0;
+    let mut curr_node = node;
+    for dir in directions.chars().cycle() {
+        if curr_node.borrow().value == "ZZZ" {
+            break;
+        }
+        curr_node = match dir {
+            'L' => {
+                steps += 1;
+                curr_node.borrow().left.as_ref().unwrap().clone()
+            }
+            'R' => {
+                steps += 1;
+                curr_node.borrow().right.as_ref().unwrap().clone()
+            }
+            _ => curr_node,
+        };
+    }
+    steps
 }
 
 // fn process_part_two<R: Read>(reader: BufReader<R>) -> u32 {
-//     0
+// 0
 // }
 
 #[cfg(test)]
