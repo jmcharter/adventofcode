@@ -16,7 +16,9 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn parse_data<R: Read>(reader: BufReader<R>) -> Vec<String> {}
+fn parse_data<R: Read>(reader: BufReader<R>) -> Vec<String> {
+    reader.lines().flatten().collect()
+}
 
 fn process_part_one<R: Read>(reader: BufReader<R>) -> u64 {
     0
@@ -30,12 +32,12 @@ fn process_part_one<R: Read>(reader: BufReader<R>) -> u64 {
 mod tests {
     use super::*;
 
-    const INPUT: &str = "";
+    const INPUT: &str = "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7";
 
     #[test]
     fn test_process_part_one() {
         let input_bytes = INPUT.as_bytes();
-        assert_eq!(0, process_part_one(BufReader::new(input_bytes)));
+        assert_eq!(1320, process_part_one(BufReader::new(input_bytes)));
     }
 
     // #[test]
