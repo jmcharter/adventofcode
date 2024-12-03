@@ -13,4 +13,4 @@ Cargo.lock
 input.in
 
 # Erlang
-.dump
+erl_crash.dump
