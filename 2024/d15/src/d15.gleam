@@ -1,7 +1,7 @@
 import gleam/dict.{type Dict}
+import gleam/int
 import gleam/io
 import gleam/list
-import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
 import simplifile
@@ -24,6 +24,33 @@ pub type Cell {
   Box
   Floor
   Wall
+}
+
+fn print_grid(grid: Grid(Cell)) -> String {
+  // Find grid boundaries
+  let positions = dict.keys(grid)
+  let assert Ok(max_row) =
+    list.map(positions, fn(pos) { pos.0 })
+    |> list.reduce(fn(a, b) { int.max(a, b) })
+  let assert Ok(max_col) =
+    list.map(positions, fn(pos) { pos.1 })
+    |> list.reduce(fn(a, b) { int.max(a, b) })
+
+  list.range(0, max_row)
+  |> list.map(fn(row) {
+    list.range(0, max_col)
+    |> list.map(fn(col) {
+      case dict.get(grid, #(row, col)) {
+        Ok(Bot) -> "@"
+        Ok(Box) -> "O"
+        Ok(Floor) -> "."
+        Ok(Wall) -> "#"
+        _ -> " "
+      }
+    })
+    |> string.join("")
+  })
+  |> string.join("\n")
 }
 
 fn char_to_cell(char: String) {
@@ -68,11 +95,6 @@ fn movement_to_relative_point(move: Movement) -> Point {
   }
 }
 
-fn move_object(object: Object, move: Movement) {
-  let new_pos = movement_to_relative_point(move)
-  Object(#(object.position.0 + new_pos.0, object.position.1 + new_pos.1))
-}
-
 fn parse_input(filename) {
   use input <- result.try(
     simplifile.read(filename) |> result.replace_error(Nil),
@@ -101,52 +123,98 @@ fn add_point(a: Point, b: Point) {
   #(a.0 + b.0, a.1 + b.1)
 }
 
-fn get_moves(
+// fn get_moves(
+//   grid: Grid(Cell),
+//   current_pos: Point,
+//   move_point: Point,
+//   moves: List(Point),
+// ) {
+//   case dict.get(grid, current_pos) {
+//     Ok(Wall) -> moves
+//     Ok(Floor) -> [current_pos, ..moves]
+//     Ok(Box) | Ok(Bot) ->
+//       get_moves(grid, add_point(current_pos, move_point), move_point, [
+//         current_pos,
+//         ..moves
+//       ])
+//     _ -> panic as "Unexpected result found in position."
+//   }
+// }
+
+fn get_push_chain(
   grid: Grid(Cell),
-  current_pos: Point,
+  start_pos: Point,
   move_point: Point,
-  moves: List(Point),
+  chain: List(Point),
 ) {
-  case dict.get(grid, current_pos) {
-    Ok(Wall) -> moves
-    Ok(Floor) -> [current_pos, ..moves]
-    Ok(Box) | Ok(Bot) ->
-      get_moves(grid, add_point(current_pos, move_point), move_point, [
-        current_pos,
-        ..moves
-      ])
-    _ -> panic as "Unexpected result found in position."
+  let next_pos = add_point(start_pos, move_point)
+  case dict.get(grid, next_pos) {
+    // Invalid push, no chain
+    Ok(Wall) -> []
+    // Valid push, return chain
+    Ok(Floor) -> [start_pos, ..chain]
+    // Handle box
+    Ok(Box) -> {
+      get_push_chain(grid, next_pos, move_point, [start_pos, ..chain])
+    }
+    _ -> panic
   }
 }
 
 fn update_grid(grid: Grid(Cell), move: Movement) {
+  // io.println(print_grid(grid))
+  // io.println("---")
+  // io.println("Attempt to move: " <> string.inspect(move))
+  // io.println("---")
   let assert Ok(bot) = get_bot_position_from_grid(grid)
-  let moves =
-    get_moves(grid, bot.position, movement_to_relative_point(move), [])
-    |> list.reverse()
-  let assert Ok(first_move) = list.first(moves)
-  let move_windows = list.window(moves, 2)
-  let grid =
-    list.fold(move_windows, grid, fn(grid, moves) {
-      dict.upsert(grid, result.unwrap(list.first(moves), #(0, 0)), fn(x) {
-        todo
-      })
-    })
-  let grid =
-    dict.upsert(grid, first_move, fn(x) {
-      case x {
-        _ -> Floor
+  let move_point = movement_to_relative_point(move)
+  let next_pos = add_point(bot.position, move_point)
+
+  case dict.get(grid, next_pos) {
+    Ok(Wall) -> grid
+    // Can't move into walls
+    Ok(Floor) -> {
+      // Simple move into unoccupied space 
+      dict.insert(dict.insert(grid, bot.position, Floor), next_pos, Bot)
+    }
+    Ok(Box) -> {
+      // Push box(es) if able.
+      let push_chain = get_push_chain(grid, next_pos, move_point, [])
+      case push_chain {
+        [] -> grid
+        // No chain, just return grid
+        [_, ..] as box_chain -> {
+          // A chain of at least one, move everything in chain
+          // Move boxes forward
+          let grid =
+            list.fold(box_chain, grid, fn(grid, box_pos) {
+              let box_next_pos = add_point(box_pos, move_point)
+              dict.insert(dict.insert(grid, box_pos, Floor), box_next_pos, Box)
+            })
+          // Move bot forward
+          dict.insert(dict.insert(grid, bot.position, Floor), next_pos, Bot)
+        }
       }
-    })
-  grid
+    }
+    _ -> grid
+  }
+}
+
+fn score_grid(grid: Grid(Cell)) {
+  // 100 * row + column
+  let boxes = dict.filter(grid, fn(_key, value) { value == Box })
+  use sum, position, _ <- dict.fold(boxes, 0)
+  let #(row, col) = position
+  sum + { 100 * row } + col
 }
 
 fn part_one(grid: Grid(Cell), moves: List(Movement)) {
   list.fold(moves, grid, fn(grid, move) { update_grid(grid, move) })
+  |> score_grid
 }
 
 pub fn main() {
-  let file = "sample.in"
+  let file = "input.in"
   let assert Ok(#(grid, moves)) = parse_input(file)
   part_one(grid, moves)
   |> io.debug
