@@ -208,6 +208,10 @@ fn score_grid(grid: Grid(Cell)) {
   sum + { 100 * row } + col
 }
 
+fn scale_grid(grid: Grid(Cell)) {
+  todo
+}
+
 fn part_one(grid: Grid(Cell), moves: List(Movement)) {
   list.fold(moves, grid, fn(grid, move) { update_grid(grid, move) })
   |> score_grid
